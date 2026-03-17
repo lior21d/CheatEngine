@@ -22,6 +22,8 @@ public:
     void scanProcess(); // TODO: Add scanning
     void scanPage(LPCVOID baseAddress, uintptr_t offset, std::vector<unsigned char>& buffer);
     void findValueFirstScan(std::vector<unsigned char>& buffer, LPCVOID address);
+    void findValueFinal();
+    void overwriteValue();
 
 private:
     DWORD _pageSize;
@@ -31,6 +33,8 @@ private:
     std::pair<std::string, int> _chosenType;
     std::vector<LPCVOID> _foundAddresses;
     std::vector<unsigned char> _value;
+    std::vector<unsigned char> _newValue;
+    BOOL _firstScan;
 };
 
 #endif // MEMORYSCANNER_HPP

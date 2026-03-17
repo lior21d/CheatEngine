@@ -3,6 +3,7 @@
 // Ctor
 MemoryScanner::MemoryScanner(int pid, HANDLE handle) : Process(pid) {
     this->_procHandle = handle;
+    _firstScan = TRUE;
 }
 
 
@@ -55,23 +56,27 @@ void MemoryScanner::typesCreate() {
 
 void MemoryScanner::getUserInput()
 {
-    // Get user input
-    std::string type;
-    printf("Enter your type of variable:\n(int, string)\n");
-    std::cin >> type;
-
-    // Create the map
-    typesCreate();
-
-    // Iterate over them and see what the user chose
-    for (const auto& pair : _types)
+    if (_firstScan == TRUE)
     {
-        if (pair.first == type)
-        {
-            _chosenType = pair;
-        }
+        // Get user input
+        std::string type;
+        printf("Enter your type of variable:\n(int, string)\n");
+        std::cin >> type;
 
+        // Create the map
+        typesCreate();
+
+        // Iterate over them and see what the user chose
+        for (const auto& pair : _types)
+        {
+            if (pair.first == type)
+            {
+                _chosenType = pair;
+            }
+
+        }
     }
+
 
     if (_chosenType.first == "string") {
         
@@ -85,6 +90,13 @@ void MemoryScanner::getUserInput()
         _value = std::vector<unsigned char>(_chosenType.second);
         std::memcpy(_value.data(), input.data(), _chosenType.second);
 
+        // Enter new value
+        if (_firstScan == TRUE) {
+            printf("Enter new value: ");
+            std::cin >> input;
+            _newValue = std::vector<unsigned char>(_chosenType.second);
+            std::memcpy(_newValue.data(), input.data(), _chosenType.second);
+        }
     }
 
     else if (_chosenType.first == "int")
@@ -95,7 +107,17 @@ void MemoryScanner::getUserInput()
 
         _value = std::vector<unsigned char>(_chosenType.second);
         std::memcpy(_value.data(), &input, _chosenType.second);
+
+        // Enter new value
+        if (_firstScan == TRUE) {
+            printf("Enter new value: ");
+            std::cin >> input;
+            _newValue = std::vector<unsigned char>(_chosenType.second);
+            std::memcpy(_newValue.data(), &input, _chosenType.second);
+        }
     }
+
+    _firstScan = FALSE;
 }
 
 
@@ -120,7 +142,11 @@ void MemoryScanner::scanProcess() {
             offset = offset + (uintptr_t)_pageSize;
         }
     }
-    
+
+    // Now we probably have many addresses with the value so now we run it again until we
+    // only have one
+    findValueFinal();
+    overwriteValue();
 }
 
 
@@ -139,13 +165,6 @@ void MemoryScanner::scanPage(LPCVOID baseAddress, uintptr_t offset, std::vector<
    
     // Try to find the value in it
     findValueFirstScan(buffer, address);
-
-    // Now we probably have many addresses with the value so now we run it again until we
-    // only have one
-    while (_foundAddresses.size() != 1)
-    {
-
-    }
 }
 
 void MemoryScanner::findValueFirstScan(std::vector<unsigned char>& buffer, LPCVOID address) {
@@ -160,6 +179,61 @@ void MemoryScanner::findValueFirstScan(std::vector<unsigned char>& buffer, LPCVO
 }
 
 
+void MemoryScanner::findValueFinal() {
+    std::vector<unsigned char> buffer(_chosenType.second);
+    if (_foundAddresses.size() == 1) {
+        printf("0x%p\n", _foundAddresses[0]);
+    }
+    while (_foundAddresses.size() > 1) {
+
+        for (int i = 0; i < _foundAddresses.size(); ) {
+
+            BOOL read = ReadProcessMemory(
+                _procHandle,
+                _foundAddresses[i],
+                buffer.data(),
+                buffer.size(),
+                NULL
+            );
+
+            if (!read || std::memcmp(buffer.data(), _value.data(), _value.size()) != 0) {
+                _foundAddresses.erase(_foundAddresses.begin() + i);
+            }
+            else {
+                i++;
+            }
+        }
+        printf("Found the value at %d addresses\n", _foundAddresses.size());
+        for (const auto& address : _foundAddresses) {
+            printf("0x%p\n", address);
+        }
+        printf("Do you want to overwrite now? y/n: ");
+        std::string overwrite;
+        std::cin >> overwrite;
+        if (overwrite == "y") {
+            break;
+        }
+        else {
+            getUserInput();
+        }
+    }
+}
+
+
+void MemoryScanner::overwriteValue() {
+    for (int i = 0; i < _foundAddresses.size(); i++)
+    {
+        BOOL write = WriteProcessMemory(
+            _procHandle, // hProcess
+            (LPVOID)_foundAddresses[i], // lpBaseAddress
+            _newValue.data(), // lpBuffer
+            _chosenType.second, // nSize
+            NULL // lpNumberOfBytesWritten
+        );
+    }
+
+
+}
 
 
 
