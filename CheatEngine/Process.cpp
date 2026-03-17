@@ -1,17 +1,12 @@
 #include "Process.hpp"
+#include "MemoryScanner.hpp"
 
 // Ctor
-Process::Process(int pid) : _procHandle(NULL), _pid(pid) {}
+Process::Process(int pid) : _procHandle(NULL), _pid(pid), _memoryscanner(nullptr) {}
 
 // Dtor
 Process::~Process() {
 
-	// Exit the process and try to also close the handle
-	if (CloseHandle(_procHandle) == FALSE) {
-		int errorCode = GetLastError();
-		printf("Error Code: %d, Failed to close handle, exiting.", errorCode);
-		ExitProcess(0);
-	}
 }
 
 
@@ -41,4 +36,14 @@ HANDLE Process::getHandle() {
 
 void Process::setHandle(HANDLE handle) {
 	_procHandle = handle;
+}
+
+
+void Process::init() {
+	// Initialise the object
+	openHandleOnProcess();
+
+	// Initialise memoryscanner
+	_memoryscanner = new MemoryScanner(_pid, _procHandle);
+	_memoryscanner->init();
 }

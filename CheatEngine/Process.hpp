@@ -5,20 +5,27 @@
 #include <iostream>
 #include <Windows.h>
 
+// Forward decleration
+class MemoryScanner;
 
 class Process {
 public:
 	Process(int pid); // Ctor
-	~Process(); // Dtor
+	virtual ~Process(); // Dtor
 
 	// Methods
+
 	void openHandleOnProcess();
 	HANDLE getHandle();
 	void setHandle(HANDLE handle);
+	void init();
+
+protected:
+	HANDLE _procHandle;
 
 private:
 	int _pid;
-	HANDLE _procHandle;
+	MemoryScanner* _memoryscanner;
 };
 
 
