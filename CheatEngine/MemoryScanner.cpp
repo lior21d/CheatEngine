@@ -8,18 +8,18 @@ MemoryScanner::MemoryScanner(int pid, HANDLE handle) : Process(pid) {
 
 
 void MemoryScanner::init() {
-	calcPageSizeAndMaxRange();
-	queryVirtualMemoryRanges();
+    calcPageSizeAndMaxRange();
+    queryVirtualMemoryRanges();
     scanProcess();
 }
 
 
 void MemoryScanner::calcPageSizeAndMaxRange() {
-	// Calculate the page size and max virtual address space
-	SYSTEM_INFO si;
-	GetSystemInfo(&si);
-	_pageSize = si.dwPageSize;
-	_maxVirtualRange = si.lpMaximumApplicationAddress;
+    // Calculate the page size and max virtual address space
+    SYSTEM_INFO si;
+    GetSystemInfo(&si);
+    _pageSize = si.dwPageSize;
+    _maxVirtualRange = si.lpMaximumApplicationAddress;
 }
 
 void MemoryScanner::queryVirtualMemoryRanges() {
@@ -79,7 +79,7 @@ void MemoryScanner::getUserInput()
 
 
     if (_chosenType.first == "string") {
-        
+
         // Put into buffer
         printf("Enter your string: ");
         std::string input;
@@ -129,7 +129,7 @@ void MemoryScanner::scanProcess() {
     uintptr_t offset = 0;
 
     for (const auto& range : _ranges) {
-        
+
         // Reset offset
         offset = 0;
 
@@ -162,12 +162,14 @@ void MemoryScanner::scanPage(LPCVOID baseAddress, uintptr_t offset, std::vector<
         _pageSize, // nSize
         NULL // lpNubmerOfBytesRead
     );
-   
+
     // Try to find the value in it
     findValueFirstScan(buffer, address);
 }
 
 void MemoryScanner::findValueFirstScan(std::vector<unsigned char>& buffer, LPCVOID address) {
+
+    // Scan the memory first scan
     for (size_t i = 0; i <= buffer.size() - _value.size(); ++i) {
         if (std::memcmp(&buffer[i], _value.data(), _value.size()) == 0) {
             // found
@@ -180,6 +182,8 @@ void MemoryScanner::findValueFirstScan(std::vector<unsigned char>& buffer, LPCVO
 
 
 void MemoryScanner::findValueFinal() {
+
+    // Iterate over the first scan values and see what it relevant
     std::vector<unsigned char> buffer(_chosenType.second);
     if (_foundAddresses.size() == 1) {
         printf("0x%p\n", _foundAddresses[0]);
@@ -188,6 +192,7 @@ void MemoryScanner::findValueFinal() {
 
         for (int i = 0; i < _foundAddresses.size(); ) {
 
+            // Read and compare
             BOOL read = ReadProcessMemory(
                 _procHandle,
                 _foundAddresses[i],
@@ -203,7 +208,8 @@ void MemoryScanner::findValueFinal() {
                 i++;
             }
         }
-        printf("Found the value at %d addresses\n", _foundAddresses.size());
+
+        printf("Found the value at %d addresses\n", (int)_foundAddresses.size());
         for (const auto& address : _foundAddresses) {
             printf("0x%p\n", address);
         }
@@ -221,9 +227,11 @@ void MemoryScanner::findValueFinal() {
 
 
 void MemoryScanner::overwriteValue() {
+
+    // Overwrite process memory
     for (int i = 0; i < _foundAddresses.size(); i++)
     {
-        BOOL write = WriteProcessMemory(
+        WriteProcessMemory(
             _procHandle, // hProcess
             (LPVOID)_foundAddresses[i], // lpBaseAddress
             _newValue.data(), // lpBuffer
@@ -234,6 +242,3 @@ void MemoryScanner::overwriteValue() {
 
 
 }
-
-
-
